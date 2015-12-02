@@ -41,6 +41,7 @@ local opt = lapp[[
    --coefL1           (default 0)           L1 penalty on the weights
    --coefL2           (default 0)           L2 penalty on the weights
    -t,--threads       (default 4)           number of threads
+   --type             (default "cpu")       set up running mode
 ]]
 
 -- fix seed
@@ -120,8 +121,7 @@ else
    model = torch.load(opt.network)
 end
 
--- retrieve parameters and gradients
-parameters,gradParameters = model:getParameters()
+
 
 -- verbose
 print('<mnist> using model:')
@@ -132,7 +132,13 @@ print(model)
 --
 model:add(nn.LogSoftMax())
 criterion = nn.ClassNLLCriterion()
-
+-- set up gpu mode
+if(opt.type=='cuda') then 
+model:cuda()
+criterion:cuda()
+end
+-- retrieve parameters and gradients
+parameters,gradParameters = model:getParameters()
 ----------------------------------------------------------------------
 -- get/create dataset
 --
@@ -190,6 +196,11 @@ function train(dataset)
          targets[k] = target
          k = k + 1
       end
+      -- convert data mode
+      if opt.type == 'cuda' then
+		   targets=targets:cuda();
+		   inputs=inputs:cuda();
+	   end
 
       -- create closure to evaluate f(X) and df/dX
       local feval = function(x)
@@ -316,6 +327,11 @@ function test(dataset)
          targets[k] = target
          k = k + 1
       end
+      -- convert data mode
+      if opt.type == 'cuda' then
+		   targets=targets:cuda();
+		   inputs=inputs:cuda();
+	   end
 
       -- test samples
       local preds = model:forward(inputs)
